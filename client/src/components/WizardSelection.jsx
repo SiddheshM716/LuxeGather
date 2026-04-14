@@ -127,15 +127,23 @@ const WizardSelection = ({
                   
                   <div className="vendor-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
                     {currentVendors
-                      .filter(opt => opt.name.toLowerCase().includes(searchQuery.toLowerCase()) || opt.features.some(f => f.toLowerCase().includes(searchQuery.toLowerCase())))
-                      .filter(opt => selectedFeature === '' || opt.features.includes(selectedFeature))
+                      .filter(opt => opt.name.toLowerCase().includes(searchQuery.toLowerCase()) || (opt.features || []).some(f => f.toLowerCase().includes(searchQuery.toLowerCase())))
+                      .filter(opt => selectedFeature === '' || (opt.features || []).includes(selectedFeature))
                       .sort((a, b) => {
                         if (sortOrder === 'priceAsc') return a.price - b.price;
                         if (sortOrder === 'priceDesc') return b.price - a.price;
                         return 0;
                       })
-                      .map(opt => {
+                      .map((opt, idx) => {
                         const pKey = WIZARD_STEPS[wizardStep].id;
+                        const defaultImages = {
+                          venue: ['https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=600'],
+                          catering: ['https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1512149177596-f817c7ef5d4c?auto=format&fit=crop&q=80&w=600'],
+                          decorations: ['https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?auto=format&fit=crop&q=80&w=600'],
+                          entertainment: ['https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&q=80&w=600'],
+                          photography: ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&q=80&w=600', 'https://images.unsplash.com/photo-1533142266401-9231f2adbc4c?auto=format&fit=crop&q=80&w=600']
+                        };
+                        const fallbackImg = defaultImages[pKey]?.[idx % 3] || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600';
                       return (
                         <div 
                           key={opt._id} 
@@ -151,11 +159,9 @@ const WizardSelection = ({
                           }} 
                           onClick={() => updateParam(pKey, opt)}
                         >
-                          {opt.imageUrl && (
-                            <div style={{ height: '180px', width: '100%', overflow: 'hidden' }}>
-                              <img src={opt.imageUrl} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease', transform: params[pKey]?._id === opt._id ? 'scale(1.05)' : 'scale(1)' }} />
-                            </div>
-                          )}
+                          <div style={{ height: '180px', width: '100%', overflow: 'hidden' }}>
+                            <img src={opt.imageUrl || opt.image || fallbackImg} alt={opt.name} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease', transform: params[pKey]?._id === opt._id ? 'scale(1.05)' : 'scale(1)' }} />
+                          </div>
                           
                           <div style={{ padding: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>

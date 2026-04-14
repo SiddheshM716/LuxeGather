@@ -1,6 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const LandingPage = ({ setStep, vendors, selectedVendorModal, setSelectedVendorModal }) => {
+  const [expandedCategories, setExpandedCategories] = useState({});
+
+  const toggleExpand = (categoryId) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+  };
+
   return (
     <>
       <section id="home" className="hero">
@@ -35,11 +44,11 @@ const LandingPage = ({ setStep, vendors, selectedVendorModal, setSelectedVendorM
               <h2 style={{ fontSize: '3rem', fontWeight: 900, marginBottom: '1rem' }}>{cat.title}</h2>
               <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '3rem' }}>{cat.desc}</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
-                {(vendors?.[cat.id] || []).slice(0, 3).map((v, idx) => {
+                {(vendors?.[cat.id] || []).slice(0, expandedCategories[cat.id] ? undefined : 3).map((v, idx) => {
                   const fallbackImg = defaultImages[cat.id][idx % 3];
                   return (
                     <div key={v._id} className="event-card" onClick={() => setSelectedVendorModal({...v, categoryId: cat.id, fallbackImg})}>
-                      <img src={v.image || fallbackImg} alt={v.name} style={{ width: '100%', height: '250px', objectFit: 'cover' }} />
+                      <img src={v.imageUrl || v.image || fallbackImg} alt={v.name} style={{ width: '100%', height: '250px', objectFit: 'cover' }} />
                       <div className="event-card-content" style={{ textAlign: 'left', padding: '1.5rem' }}>
                         <h3 style={{ fontSize: '1.4rem' }}>{v.name}</h3>
                         <p style={{ height: '45px', overflow: 'hidden', color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>{v.description}</p>
@@ -49,6 +58,13 @@ const LandingPage = ({ setStep, vendors, selectedVendorModal, setSelectedVendorM
                   );
                 })}
               </div>
+              {vendors?.[cat.id] && vendors[cat.id].length > 3 && (
+                <div style={{ marginTop: '3rem' }}>
+                  <button className="btn-secondary" onClick={() => toggleExpand(cat.id)} style={{ padding: '0.6rem 2rem', fontWeight: 800 }}>
+                    {expandedCategories[cat.id] ? 'Show Less' : `Show All ${vendors[cat.id].length} Providers`}
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         );

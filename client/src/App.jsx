@@ -7,6 +7,10 @@ import LandingPage from './components/LandingPage';
 import AuthForms from './components/AuthForms';
 import WizardSelection from './components/WizardSelection';
 import SummaryStep from './components/SummaryStep';
+import Dashboard from './components/Dashboard';
+import VendorDashboard from './components/VendorDashboard';
+import VendorProfileModal from './components/VendorProfileModal';
+import CustomerProfileModal from './components/CustomerProfileModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
@@ -43,6 +47,7 @@ function App() {
   const [vendors, setVendors] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedVendorModal, setSelectedVendorModal] = useState(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const WIZARD_STEPS = [
     { id: 'venue', title: 'Venue Selection' },
@@ -61,15 +66,17 @@ function App() {
   });
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await axios.get(`${API_URL}/vendors`);
-        setVendors(data);
-      } catch (err) {
-        console.error('Failed to load vendors', err);
-      }
-    })();
-  }, []);
+    if (step === 'landing' || step === 'selection') {
+      (async () => {
+        try {
+          const { data } = await axios.get(`${API_URL}/vendors`);
+          setVendors(data);
+        } catch (err) {
+          console.error('Failed to load vendors', err);
+        }
+      })();
+    }
+  }, [step]);
 
   const [bookingId, setBookingId] = useState(null);
 
@@ -99,11 +106,11 @@ function App() {
         user: user._id,
         eventType: selectedEvent.id,
         eventParams: {
-          venue: params.venue._id,
-          catering: params.catering._id,
-          decorations: params.decorations._id,
-          entertainment: params.entertainment._id,
-          photography: params.photography._id
+          venue: params.venue?._id || undefined,
+          catering: params.catering?._id || undefined,
+          decorations: params.decorations?._id || undefined,
+          entertainment: params.entertainment?._id || undefined,
+          photography: params.photography?._id || undefined
         },
         filters,
         totalPrice
@@ -153,9 +160,24 @@ function App() {
           <a href="#about-us" onClick={() => setStep('landing')}>About Us</a>
           <a href="#contact-us" onClick={() => setStep('landing')}>Contact Us</a>
           {user ? (
-            <div className="user-profile" style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '1rem' }}>
-               <span style={{ fontWeight: 800, color: 'var(--primary-color)' }}>{user.username.toUpperCase()}</span>
-               <button className="btn-secondary" onClick={() => { setUser(null); setStep('landing'); }} style={{ padding: '0.4rem 1rem', fontSize: '0.8rem', borderWidth: '1px' }}>Logout</button>
+            <div className="user-profile user-dropdown-container" style={{ marginLeft: '1rem' }}>
+              <span style={{ fontWeight: 800, color: 'var(--primary-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                {user.username.toUpperCase()} ▾
+              </span>
+              <div className="user-dropdown-content">
+                {user.appRole === 'vendor' ? (
+                  <>
+                    <button onClick={() => setStep('vendor-dashboard')}>Vendor Workspace</button>
+                    <button onClick={() => setShowProfileModal(true)}>Edit Profile</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setStep('dashboard')}>My Bookings</button>
+                    <button onClick={() => setShowProfileModal(true)}>Edit Profile</button>
+                  </>
+                )}
+                <button onClick={() => { setUser(null); setStep('landing'); }}>Logout</button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: '1rem' }}>
@@ -191,6 +213,14 @@ function App() {
 
         {step === 'summary' && (
           <SummaryStep selectedEvent={selectedEvent} params={params} filters={filters} totalPrice={totalPrice} setStep={setStep} setSelectedEvent={setSelectedEvent} />
+        )}
+        
+        {step === 'dashboard' && user && user.appRole !== 'vendor' && (
+          <Dashboard user={user} setStep={setStep} />
+        )}
+
+        {step === 'vendor-dashboard' && user && user.appRole === 'vendor' && (
+          <VendorDashboard user={user} setStep={setStep} />
         )}
       </main>
 
@@ -252,6 +282,14 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {showProfileModal && (
+        user.appRole === 'vendor' ? (
+          <VendorProfileModal user={user} setUser={setUser} close={() => setShowProfileModal(false)} />
+        ) : (
+          <CustomerProfileModal user={user} setUser={setUser} close={() => setShowProfileModal(false)} />
+        )
       )}
 
     </div>

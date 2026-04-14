@@ -1,13 +1,16 @@
 const mongoose = require('mongoose');
 
 const vendorSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  identifier: { type: String, required: true, unique: true },
+  username: { type: String, default: '' },
+  isVerified: { type: Boolean, default: false },
+  name: { type: String, default: 'Pending Vendor Name' },
   category: { 
     type: String, 
-    required: true, 
-    enum: ['venue', 'catering', 'decorations', 'entertainment', 'photography'] 
+    enum: ['venue', 'catering', 'decorations', 'entertainment', 'photography', ''],
+    default: ''
   },
-  price: { type: Number, required: true },
+  price: { type: Number, default: 0 },
   description: { type: String },
   imageUrl: { type: String },
   features: [{ type: String }],

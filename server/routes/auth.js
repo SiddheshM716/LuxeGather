@@ -43,13 +43,15 @@ router.post('/verify-otp', async (req, res) => {
 
 router.post('/complete-profile', async (req, res) => {
   try {
-    const { identifier, username } = req.body;
+    const { identifier, username, fullName, phoneNumber } = req.body;
     const user = await User.findOne({ identifier });
     
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (!user.isVerified) return res.status(401).json({ error: 'User not verified' });
     
     user.username = username;
+    if (fullName) user.fullName = fullName;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
     await user.save();
     
     res.json({ message: 'Profile completed', user });
@@ -58,4 +60,23 @@ router.post('/complete-profile', async (req, res) => {
   }
 });
 
+// Update profile route
+router.put('/profile/:id', async (req, res) => {
+  try {
+    const { fullName, phoneNumber } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    if (fullName) user.fullName = fullName;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    
+    await user.save();
+    res.json({ message: 'Profile updated successfully', user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
+

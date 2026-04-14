@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Vendor = require('../models/Vendor');
+const upload = require('../middleware/upload');
 
 // Get all vendors grouped by category
 router.get('/', async (req, res) => {
   try {
-    const vendors = await Vendor.find();
+    // Only return vendors who have completed their profiles (meaning they picked a real category, not the default empty string, and are verified)
+    const vendors = await Vendor.find({ 
+        isVerified: true, 
+        category: { $in: ['venue', 'catering', 'decorations', 'entertainment', 'photography'] } 
+    });
     
     // Group them
     const grouped = {
@@ -22,10 +27,48 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Update vendor profile
+router.put('/:id/profile', upload.single('image'), async (req, res) => {
+  try {
+    const { features, description, price } = req.body;
+    
+    // Parse features if they come as a string (common with FormData)
+    let parsedFeatures = features;
+    if (typeof features === 'string') {
+      try {
+        parsedFeatures = JSON.parse(features);
+      } catch (e) {
+        parsedFeatures = features.split(',').map(f => f.trim());
+      }
+    }
+
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) return res.status(404).json({ error: 'Vendor not found' });
+    
+    if (parsedFeatures && Array.isArray(parsedFeatures)) vendor.features = parsedFeatures;
+    if (description) vendor.description = description;
+    if (price !== undefined) vendor.price = Number(price);
+    
+    // Update imageUrl if a new file was uploaded
+    if (req.file) {
+      vendor.imageUrl = req.file.path;
+    }
+    
+    await vendor.save();
+    
+    res.json({ message: 'Profile updated successfully', vendor });
+  } catch (error) {
+    console.error('Vendor profile update error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+
 // Seed data
 router.post('/seed', async (req, res) => {
   try {
-    await Vendor.deleteMany();
+    // Only delete previously seeded vendors so manual registrations are preserved
+    await Vendor.deleteMany({ identifier: { $regex: /^seed_vendor_/ } });
     
     const seedData = [
       // Venues
@@ -54,7 +97,14 @@ router.post('/seed', async (req, res) => {
       { name: 'Vogue Lens', category: 'photography', price: 680000, description: 'Editorial fashion-style photography', imageUrl: 'https://images.unsplash.com/photo-1533142266401-9231f2adbc4c?auto=format&fit=crop&q=80&w=800', features: ['Magazine Quality retouches', 'Stylist Included', 'Leather Bound Album'] }
     ];
 
-    await Vendor.insertMany(seedData);
+    const updatedSeedData = seedData.map((v, i) => ({
+      ...v,
+      identifier: `seed_vendor_${i}@luxegather.com`,
+      username: `SeedVendor${i}`,
+      isVerified: true
+    }));
+
+    await Vendor.insertMany(updatedSeedData);
     res.json({ message: 'Vendors seeded successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to seed vendors' });
