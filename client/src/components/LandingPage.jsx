@@ -50,7 +50,13 @@ const LandingPage = ({ setStep, vendors, selectedVendorModal, setSelectedVendorM
                     <div key={v._id} className="event-card" onClick={() => setSelectedVendorModal({...v, categoryId: cat.id, fallbackImg})}>
                       <img src={v.imageUrl || v.image || fallbackImg} alt={v.name} style={{ width: '100%', height: '250px', objectFit: 'cover' }} />
                       <div className="event-card-content" style={{ textAlign: 'left', padding: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1.4rem' }}>{v.name}</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                          <h3 style={{ fontSize: '1.4rem', margin: 0 }}>{v.name}</h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.9rem', color: '#f39c12', fontWeight: 700 }}>
+                            ★ {v.rating ? v.rating.toFixed(1) : '5.0'} 
+                            <span style={{ color: '#888', fontWeight: 500, fontSize: '0.8rem' }}>({v.ratingCount || 1})</span>
+                          </div>
+                        </div>
                         <p style={{ height: '45px', overflow: 'hidden', color: '#666', fontSize: '0.95rem', marginBottom: '1rem' }}>{v.description}</p>
                         <p style={{ fontWeight: 800, color: 'var(--primary-color)', margin: 0 }}>Click For Details →</p>
                       </div>

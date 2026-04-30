@@ -62,7 +62,50 @@ router.put('/:id/profile', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: 'Failed to update profile' });
   }
 });
+// Rate vendor
+router.post('/:id/rate', async (req, res) => {
+  try {
+    const { rating, userId } = req.body;
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
 
+    const vendor = await Vendor.findById(req.params.id);
+    if (!vendor) return res.status(404).json({ error: 'Vendor not found' });
+    
+    const existingRatingIndex = vendor.ratings.findIndex(r => r.userId.toString() === userId);
+    
+    if (existingRatingIndex !== -1) {
+      // User already rated, update their rating
+      const oldRating = vendor.ratings[existingRatingIndex].rating;
+      vendor.ratings[existingRatingIndex].rating = Number(rating);
+      
+      const currentCount = vendor.ratingCount || 1;
+      // Recalculate average: remove old rating, add new rating
+      const currentTotal = (vendor.rating || 5.0) * currentCount;
+      vendor.rating = (currentTotal - oldRating + Number(rating)) / currentCount;
+    } else {
+      // New rating
+      vendor.ratings.push({ userId, rating: Number(rating) });
+      const currentCount = vendor.ratingCount || 1;
+      const currentRating = vendor.rating || 5.0;
+      
+      const newCount = currentCount + 1;
+      vendor.rating = ((currentRating * currentCount) + Number(rating)) / newCount;
+      vendor.ratingCount = newCount;
+    }
+    
+    await vendor.save();
+    
+    res.json({ message: 'Rating submitted successfully', vendor });
+  } catch (error) {
+    console.error('Vendor rating error:', error);
+    res.status(500).json({ error: 'Failed to submit rating' });
+  }
+});
 
 // Seed data
 router.post('/seed', async (req, res) => {

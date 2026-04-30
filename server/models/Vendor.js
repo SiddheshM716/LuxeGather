@@ -14,7 +14,12 @@ const vendorSchema = new mongoose.Schema({
   description: { type: String },
   imageUrl: { type: String },
   features: [{ type: String }],
-  rating: { type: Number, default: 5.0 }
+  rating: { type: Number, default: 5.0 },
+  ratingCount: { type: Number, default: 1 },
+  ratings: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rating: { type: Number, required: true }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Vendor', vendorSchema);

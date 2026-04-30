@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { MessageSquare, ChevronDown } from 'lucide-react';
+import { MessageSquare, ChevronDown, Star } from 'lucide-react';
 import { io } from 'socket.io-client';
 import InlineChat from './InlineChat';
 import './Dashboard.css';
@@ -23,7 +23,28 @@ const Dashboard = ({ user, setStep }) => {
   const [expandedEventId, setExpandedEventId] = useState(null);
   const [activeChatId, setActiveChatId] = useState(null);
   const [unreadMessages, setUnreadMessages] = useState({});
+  const [ratingLoading, setRatingLoading] = useState({});
+  const [userRatings, setUserRatings] = useState({});
   const activeChatIdRef = useRef(null);
+
+  const getUserRating = (vendorDetail) => {
+    if (userRatings[vendorDetail._id]) return userRatings[vendorDetail._id];
+    const ratingObj = vendorDetail.ratings?.find(r => r.userId === user._id);
+    return ratingObj ? ratingObj.rating : null;
+  };
+
+  const handleRateVendor = async (vendorId, ratingValue) => {
+    try {
+      setRatingLoading(prev => ({ ...prev, [vendorId]: true }));
+      await axios.post(`${API_URL}/vendors/${vendorId}/rate`, { rating: ratingValue, userId: user._id });
+      setUserRatings(prev => ({ ...prev, [vendorId]: ratingValue }));
+    } catch (error) {
+      console.error('Error rating vendor:', error);
+      alert('Failed to submit rating.');
+    } finally {
+      setRatingLoading(prev => ({ ...prev, [vendorId]: false }));
+    }
+  };
 
   // Keep ref in sync so the socket listener can check current value without re-subscribing
   useEffect(() => { activeChatIdRef.current = activeChatId; }, [activeChatId]);
@@ -182,6 +203,22 @@ const Dashboard = ({ user, setStep }) => {
                                 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                   <span className={`vendor-status ${vendorStatus.toLowerCase()}`}>{vendorStatus}</span>
+                                  
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginRight: '10px' }} title="Rate Vendor">
+                                    {[1, 2, 3, 4, 5].map(star => {
+                                      const currentRating = getUserRating(vendorDetail);
+                                      const isFilled = currentRating && star <= currentRating;
+                                      return (
+                                        <Star 
+                                          key={star} 
+                                          size={16} 
+                                          fill={isFilled ? "#f39c12" : "none"}
+                                          style={{ cursor: ratingLoading[vendorDetail._id] ? 'not-allowed' : 'pointer', color: isFilled ? '#f39c12' : '#ccc' }}
+                                          onClick={() => !ratingLoading[vendorDetail._id] && handleRateVendor(vendorDetail._id, star)}
+                                        />
+                                      );
+                                    })}
+                                  </div>
                                   
                                   <button 
                                     onClick={() => {

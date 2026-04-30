@@ -165,7 +165,13 @@ const WizardSelection = ({
                           
                           <div style={{ padding: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.8rem' }}>
-                              <h4 style={{ fontWeight: 800, fontSize: '1.1rem', margin: 0, paddingRight: '10px' }}>{opt.name}</h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <h4 style={{ fontWeight: 800, fontSize: '1.1rem', margin: 0, paddingRight: '10px' }}>{opt.name}</h4>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', color: '#f39c12', fontWeight: 700 }}>
+                                  ★ {opt.rating ? opt.rating.toFixed(1) : '5.0'} 
+                                  <span style={{ color: '#888', fontWeight: 500, fontSize: '0.75rem' }}>({opt.ratingCount || 1})</span>
+                                </div>
+                              </div>
                               <span style={{ fontWeight: 800, color: 'var(--primary-color)', whiteSpace: 'nowrap' }}>
                                 +₹{opt.price.toLocaleString()}{pKey === 'catering' ? ' / person' : ''}
                               </span>
