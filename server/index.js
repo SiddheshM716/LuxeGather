@@ -92,6 +92,10 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/vendors', require('./routes/vendors'));
 app.use('/api/events', require('./routes/events'));
 
+app.get('/api', (req, res) => {
+  res.json({ message: 'LuxeGather API is running...', status: 'ok' });
+});
+
 app.get('/', (req, res) => {
   res.send('LuxeGather API is running...');
 });
