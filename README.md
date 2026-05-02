@@ -21,7 +21,7 @@ RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
 # MongoDB Database URI (MongoDB Atlas)
-MONGO_URI=mongodb+srv://siddheshm716_db_user:MongoSID123@cluster0.anedskk.mongodb.net/luxegather?appName=Cluster0
+MONGO_URI=mongodb+srv://siddheshm716_db_user:<your_database_password>@cluster0.anedskk.mongodb.net/luxegather?appName=Cluster0
 # PORT=5001
 ```
 
