@@ -20,8 +20,8 @@ CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 
-# MongoDB Database URI (optional, defaults to local mongodb instance)
-# MONGO_URI=mongodb://127.0.0.1:27017/luxegather
+# MongoDB Database URI (MongoDB Atlas)
+MONGO_URI=mongodb+srv://siddheshm716_db_user:MongoSID123@cluster0.anedskk.mongodb.net/luxegather?appName=Cluster0
 # PORT=5001
 ```
 
