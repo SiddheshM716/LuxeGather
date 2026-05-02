@@ -208,7 +208,7 @@ function App() {
         )}
 
         {step === 'payment' && (
-          <PaymentStep bookingDetails={{ totalPrice }} onPaymentSuccess={handlePaymentSuccess} onCancel={() => setStep('selection')} />
+          <PaymentStep user={user} bookingDetails={{ totalPrice }} onPaymentSuccess={handlePaymentSuccess} onCancel={() => setStep('selection')} />
         )}
 
         {step === 'summary' && (
