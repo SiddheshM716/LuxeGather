@@ -4,8 +4,8 @@ import { Send, UserCircle } from 'lucide-react';
 import axios from 'axios';
 import './ChatWidget.css';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const API_URL = `${SOCKET_URL}/api`;
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Singleton socket - stable, never recreated on re-render
 let socket = null;

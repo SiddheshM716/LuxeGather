@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 import InlineChat from './InlineChat';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001';
 
 let bgSocket = null;
 function getBgSocket() {

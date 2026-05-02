@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { MessageSquare, X, Send, Headphones } from 'lucide-react';
 import './ChatWidget.css'; // Premium styles
 
-const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5001');
+const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5001');
 
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
