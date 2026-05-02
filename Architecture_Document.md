@@ -1,12 +1,14 @@
 # LuxeGather Architecture Document
 
+> **Last Updated:** May 2026 — Updated to reflect Razorpay payment integration, MongoDB Atlas migration, and cloud deployment via Railway (backend) and Netlify (frontend).
+
 ## 1. Project Understanding
 
 Based on an analysis of the codebase, the following features have been identified:
 - **Authentication System**: OTP-based login and registration for both customers and vendors. Profile completion steps to collect additional user data.
 - **Service Browsing**: A landing page with vendor details grouped by categories (Venue, Catering, Decorations, Entertainment, Photography).
 - **Event Customization Wizard**: A multi-step flow allowing customers to set filters (budget, guest count, dates, location) and individually select vendors for different event parameters.
-- **Booking & Mock Payment Functionality**: Consolidates selected vendors and computes a total price before proceeding to a simulated payment gateway.
+- **Booking & Payment Functionality**: Consolidates selected vendors and computes a total price. Integrated with **Razorpay Payment Gateway** for real-money transactions in INR. The flow creates a server-side order, launches the Razorpay checkout modal, and verifies the payment signature on the backend before marking the booking as paid.
 - **Dashboards**: 
   - **Customer Dashboard**: To view booking history and track the status of current events.
   - **Vendor Dashboard**: To track assigned bookings and update fulfillment status (Pending, Confirmed, Completed).
@@ -41,8 +43,14 @@ Based on an analysis of the codebase, the following features have been identifie
 - **Security/Parsing**: Cors, `dotenv` for env vars.
 
 **Database**:
-- **Type**: MongoDB
+- **Type**: MongoDB Atlas (Cloud-hosted, Cluster0 on AWS)
 - **ODM**: Mongoose 8.5.2.
+
+**Payment Gateway**:
+- **Provider**: Razorpay (Test Mode)
+- **Server Package**: `razorpay` npm package (v2.9.6)
+- **Client SDK**: Dynamically loaded `checkout.razorpay.com/v1/checkout.js`
+- **Security**: HMAC-SHA256 signature verification using Node.js `crypto` module
 
 **Authentication Model**:
 - **Mechanism**: Custom OTP simulation (`1234`).
@@ -80,9 +88,11 @@ Based on an analysis of the codebase, the following features have been identifie
 | `/api/vendors/` | `GET` | Retrieves all verified vendors grouped by category. |
 | `/api/vendors/:id/profile` | `PUT` | Updates an individual vendor profile (accepts image). |
 | `/api/bookings/` | `POST` | Creates a new event booking. |
-| `/api/bookings/:id/pay` | `POST` | Updates `status` of a booking to 'paid'. |
+| `/api/bookings/:id/pay` | `POST` | Updates `status` of a booking to 'paid' after Razorpay verification. |
 | `/api/bookings/vendor/:id` | `GET` | Fetches all bookings involving a specific vendor. |
 | `/api/bookings/:id/vendor-status` | `PUT` | Allows Vendor to update their completion status. |
+| `/api/bookings/razorpay/order` | `POST` | Creates a Razorpay order on the server and returns `order_id`. |
+| `/api/bookings/razorpay/verify` | `POST` | Verifies Razorpay HMAC signature to confirm payment authenticity. |
 | `/api/events/user/:userId` | `GET` | Fetches a customer's specific bookings/events. |
 | `/api/messages/:roomId` | `GET` | Gets historic chat messages for a given room. |
 
@@ -217,9 +227,19 @@ UI -> API : POST /api/bookings (payload)
 API -> DB : creates Document in Booking collection
 DB --> API : Booking _id
 API --> UI : 201 Created
-Customer -> UI : Clicks "Pay"
+Customer -> UI : Clicks "Proceed to Pay"
+UI -> API : POST /api/bookings/razorpay/order
+API -> Razorpay : Create Order (amount in paise)
+Razorpay --> API : order_id
+API --> UI : order_id, amount, currency
+UI --> Customer : Opens Razorpay Checkout Modal
+Customer -> Razorpay : Completes Payment in Modal
+Razorpay --> UI : payment_id, order_id, signature
+UI -> API : POST /api/bookings/razorpay/verify
+API -> API : HMAC-SHA256 signature verification
+API --> UI : 200 Payment Verified
 UI -> API : POST /api/bookings/:id/pay
-API -> DB : updates Booking status ='paid'
+API -> DB : updates Booking status = 'paid'
 DB --> API : success
 API --> UI : 200 OK
 UI --> Customer : Shows Summary Step
@@ -243,24 +263,109 @@ UI --> Customer : Shows Summary Step
 | **1. Customer Sign in & OTP Creation** | ✅ Implemented | Exists in `auth.js` / Client forms. OTP is mocked as `1234`. |
 | **2. Event parameters selection (budget, location, catering...)**| ✅ Implemented | `WizardSelection` UI manages these as standard parameters. |
 | **3. Live chat with professional customer care** | ✅ Implemented | Integrated via Socket.IO `ChatWidget` with a mock auto-responder logic. |
-| **4. Pay and Book** | ✅ Implemented | Handled in `PaymentStep.jsx` and `bookings/:id/pay`. Note: Actual payment gateway is effectively a mock success trigger. |
+| **4. Pay and Book** | ✅ Implemented | Fully integrated with **Razorpay** payment gateway. Server creates an order, client opens Razorpay checkout modal, and backend verifies HMAC signature before confirming booking. |
 | **5. Track progress of booked events** | ✅ Implemented | Displayed inside Customer `Dashboard.js` reading `vendorConfirmations`. |
-| **6. Contact Vendors via Chat for Execution** | ⚠️ Partially Implemented | Database (`Message.js`) supports it, but Socket.IO is primarily wired for the concierge/global use-case. UI integration for direct Customer-to-Vendor chat rooms is incomplete or hardcoded. |
+| **6. Contact Vendors via Chat for Execution** | ✅ Implemented | `InlineChat.jsx` provides direct room-based Socket.IO chat between customers and vendors inside both dashboards. |
 | **7. Expense Calculator** | ✅ Implemented | Live price is derived via React `useMemo` calculating Event Base Price + Vendor Prices. |
-| **8. View ratings and give own rating** | ⚠️ Partially Implemented | Vendor schema stores `rating` (defaults to 5.0), however, there is no UI workflow or API route provided to *submit* a new rating. |
+| **8. View ratings and give own rating** | ✅ Implemented | Vendor schema stores per-user ratings array. Customers can rate vendors via star UI in Dashboard; backend enforces one rating per user per vendor. |
 | **9. Vendor Sign in & Description configuration** | ✅ Implemented | Exists in `/api/vendorAuth/` & `/api/vendors/:id/profile` routes. |
-| **10. Vendor order status updates & chatting**| ⚠️ Partially Implemented | Vendor status updating works via `/api/bookings/:id/vendor-status`. Contacting customers via chat directly lacks explicit room orchestration in the UI. |
+| **10. Vendor order status updates & chatting**| ✅ Implemented | Vendor status updating works via `/api/bookings/:id/vendor-status`. Vendors can chat with customers via room-based `InlineChat` in the Vendor Dashboard. |
 
 ---
 
 ## 10. Limitations
 
-- **Security & Sessions**: Instead of assigning signed JWT authentication tokens mapping to a session, it relies exclusively on React state to hold the `user` object. The API routes individually check properties manually or expect plain IDs, which represents a massive security defect for a production app. 
-- **Mock Infrastructure**: Security relies on a hardcoded `1234` OTP. SMS/Email service layers (Twilio/Nodemailer) are omitted. Payments are visually simulated and possess no real transaction bindings (Stripe/PayPal missing).
-- **Concurrency**: Because of the mock data integration, rate limiting or database scaling optimization implementations are not currently configured for high loads. 
+- **Security & Sessions**: Instead of assigning signed JWT authentication tokens mapping to a session, it relies exclusively on React state to hold the `user` object. The API routes individually check properties manually or expect plain IDs, which represents a security risk for a production app.
+- **OTP Infrastructure**: Security relies on a hardcoded `1234` OTP. SMS/Email service layers (Twilio/Nodemailer) are omitted.
+- **Razorpay Test Mode**: Payment integration uses Razorpay test API keys. Test accounts have a maximum single-transaction cap (~₹5,00,000), so prices are capped server-side before creating an order in test mode. Must switch to live keys before going to production.
+- **Concurrency**: Rate limiting or database scaling optimization implementations are not currently configured for high loads.
 - **Cloudinary Storage Handling**: While Cloudinary is leveraged, deletion of orphaned images is not implemented. When user profiles are changed, old images remain on the CDN.
 
 ---
 
 ## 11. Summary
-The MERN-stack architecture for LuxeGather operates as a modular, monolithic application running on Express and React 18. It facilitates OTP-based (mock) authentication for diverse actors, stores structured data using MongoDB, utilizes Cloudinary for multimedia upload, and implements basic bidirectional WebSocket support via Socket.IO. The user stories related to browsing, booking, calculative wizards, and dashboard interactions are strongly rooted in the code, whereas vendor-to-customer 1:1 chat routing and dynamic user-submitted ratings represent incomplete architectural paths.
+The MERN-stack architecture for LuxeGather operates as a modular, monolithic application running on Express and React 18. It facilitates OTP-based (mock) authentication, stores structured data using **MongoDB Atlas** (cloud-hosted), utilizes Cloudinary for multimedia upload, and implements bidirectional WebSocket support via Socket.IO. All user stories are now fully implemented — including real Razorpay payment processing, vendor-to-customer 1:1 chat via room-based Socket.IO, and a functional vendor rating system. The application is cloud-deployed with the backend on **Railway** and the frontend on **Netlify**.
+
+---
+
+## 12. Deployment Architecture
+
+### Infrastructure Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     LuxeGather Production                       │
+│                                                                 │
+│  ┌──────────────────┐          ┌──────────────────────────┐    │
+│  │     Netlify       │  HTTPS  │         Railway           │    │
+│  │  (Frontend SPA)  │◄───────►│    (Express + Socket.IO)  │    │
+│  │                  │         │                           │    │
+│  │  React + Vite    │         │   Node.js v22 Runtime     │    │
+│  │  Static Build    │         │   Port: Auto-assigned     │    │
+│  └──────────────────┘         └──────────┬────────────────┘    │
+│                                          │                      │
+│                               ┌──────────▼────────────┐        │
+│                               │    MongoDB Atlas       │        │
+│                               │  (Cloud DB - AWS)      │        │
+│                               │  Cluster0              │        │
+│                               └───────────────────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Frontend — Netlify
+| Property | Value |
+| :--- | :--- |
+| **Platform** | Netlify |
+| **Base Directory** | `client/` |
+| **Build Command** | `npm run build` |
+| **Publish Directory** | `dist/` |
+| **SPA Redirect** | `_redirects` + `netlify.toml` (all routes → `index.html`) |
+| **Env Variables** | `VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_RAZORPAY_KEY_ID` |
+
+### Backend — Railway
+| Property | Value |
+| :--- | :--- |
+| **Platform** | Railway |
+| **Root Directory** | Repository root (`/`) |
+| **Build Command** | `npm run build` (installs `server/` deps) |
+| **Start Command** | `npm start` (runs `server/index.js`) |
+| **Runtime** | Node.js v22 |
+| **Env Variables** | `MONGO_URI`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+
+### Database — MongoDB Atlas
+| Property | Value |
+| :--- | :--- |
+| **Provider** | MongoDB Atlas (Free Tier M0) |
+| **Cloud** | AWS |
+| **Cluster** | Cluster0 |
+| **Database** | `luxegather` |
+| **Collections** | `users`, `vendors`, `bookings`, `messages`, `otpverifications` |
+| **Network Access** | `0.0.0.0/0` (open for Railway dynamic IPs) |
+| **Migration** | Data exported from local MongoDB via `mongodump` and imported to Atlas via `mongorestore` |
+
+### External Services
+| Service | Purpose | Integration Point |
+| :--- | :--- | :--- |
+| **Razorpay** | Payment processing (INR) | Server creates order → Client opens modal → Server verifies signature |
+| **Cloudinary** | Image storage for vendor/user profile photos | Multer middleware streams upload directly from Express |
+
+### Environment Variables Reference
+
+**Server (`server/.env` / Railway Variables):**
+```env
+MONGO_URI=mongodb+srv://<user>:<password>@cluster0.anedskk.mongodb.net/luxegather
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
+
+**Client (`client/.env` / Netlify Variables):**
+```env
+VITE_API_URL=https://<railway-app>.up.railway.app/api
+VITE_SOCKET_URL=https://<railway-app>.up.railway.app
+VITE_RAZORPAY_KEY_ID=rzp_test_...
+```
+
+> **Note on Socket.IO vs REST:** Two separate env vars are required on the client. `VITE_API_URL` (ending in `/api`) is used for Axios HTTP calls. `VITE_SOCKET_URL` (no `/api` suffix) is used for Socket.IO connections, as the Socket.IO handshake occurs at the server root (`/.socket.io/...`).
